@@ -1,6 +1,5 @@
 #include "adc.h"
-
-uint8_t pin_adc = 4;
+#include <Arduino.h>
 
 float readADC(int pin) {
     int raw = analogRead(pin);
