@@ -4,8 +4,7 @@ PWMmodule::PWMmodule(int pin, int channel, int freq, int resolution)
 : _pin(pin), _channel(channel), _freq(freq), _resolution(resolution) {}
 
 void PWMmodule::begin() {
-    ledcSetup(_channel, _freq, _resolution);
-    ledcAttachPin(_pin, _channel);
+    ledcAttachChannel(_channel, _freq, _resolution, _pin);
 }
 
 void PWMmodule::setDuty(float percent) {
@@ -13,6 +12,7 @@ void PWMmodule::setDuty(float percent) {
     int maxDuty = (1 << _resolution) - 1;
     int duty = (percent / 100.0f) * maxDuty;
     ledcWrite(_channel, duty);
+
 }
 
 void PWMmodule::stop() {
