@@ -1,5 +1,6 @@
 #include "adc.h"
 #include "pwm_module.h"
+#include "alarm_logic.h"
 #include <Adafruit_ADS1X15.h>
 #include <Wire.h>
 
@@ -15,10 +16,10 @@ void setup() {
   ads1015.begin(); // External ADC setup
   pwm.begin()
   // put your setup code here, to run once:
+  initAlarmOutput(); 
 }
 
 void loop() {
-   
    ////////// Sensor reading logic + PWM
    //
    // The temperature sensors va will go on every 20s (not sure, could be changed), the gas sensors will go on immediately one after another
@@ -41,7 +42,8 @@ void loop() {
   //
   // Input parameters: gas digital values, Output parameters: 10V signal to the PLC
   //
-  ///////
+    checkLimitForAlarm(digital_value);
+  
 
   ///// OLED logic
   //
