@@ -5,17 +5,28 @@
 // Alarm threshold configuration
 extern float GAS_ALARM_THRESHOLD;  // Trigger at this gas concentration (0.03 = 3%)
 
-// Initialize alarm output on GPIO13 (relay control)
+static const int PLC_ALARM_PIN = 13;
+
+
+//Initialize the alarm output system
+//Sets up GPIO pin and ensures alarm starts in OFF state
+
 void initAlarmOutput();
 
-// Check gas concentration and control relay alarm
-// @param gas_value: Gas concentration (0.0 to 1.0 scale)
+
+//Check if gas concentration exceeds limit and trigger alarm if needed
+//@param gas_value: Current gas concentration from NDIR sensor
+
 void checkLimitForAlarm(float gas_value);
 
-// Send alarm signal to PLC via relay
-// @param activate: true = relay ON (10V to PLC), false = relay OFF (0V to PLC)
+
+//Send alarm signal to PLC by controlling relay
+//@param activate: true = relay ON (10V to PLC), false = relay OFF (0V to PLC)
+
 void send_signal_to_PLC(bool activate);
 
-// Query current alarm state
-// @return: true if alarm is active, false otherwise
+
+//Query current alarm state
+//@return: true if alarm is currently active, false otherwise
+
 bool isAlarmActive();

@@ -1,37 +1,65 @@
 #include "adc.h"
 #include "pwm_module.h"
-#include "alarm_logic.h"
+#include "NDIR_sensor.h"
+#include "thermistor.h"
 #include <Adafruit_ADS1X15.h>
 #include <Wire.h>
 
+Adafruit_ADS1115 ads1115;
 uint8_t adc_pin = 4;
-float digital_value;
+float gas_concentration;
+uint8_t cal_cons = 1; // calibration constant (idk if it will be changed in the later stages or should I make function for calculating it)
 
-Adafruit_ADS1015 ads1015;
-PWMmodule pwm(25, 0, 5000, 10);
+PWMmodule pwm_heater(25, 0, 5000, 10); // PWM setup for the MOSFAT heater: GPIO25, Channel 0, 5 khZ = 5000 Hz,  10-bit
+PWMmodule pwm_NDIR(26, 1, 4000, 10); 
+float NDIR_active_voltage, NDIR_ref_voltage, VQ5_differential_voltage;
+float csp_voltage = 0; // Current sensor pump 
 
 void setup() {
-  Serial.begin(115200)
-  Wire.begin(21, 22) // SDA -> 21, SCL -> 22
-  ads1015.begin(); // External ADC setup
-  pwm.begin()
   // put your setup code here, to run once:
-  initAlarmOutput(); 
+
+  initAlarmOutput();  // Initialize alarm relay on GPIO13
+
+
+  pinMode(14, OUTPUT);
+  Serial.begin(115200);
+  Serial.println("It works.");
+  pwm_heater.begin();
+  pwm_NDIR.begin();
+  Wire.begin(21, 22); // SDA -> 21, SCL -> 22
+  ads1115.begin(); // External ADC setup
+
+  pwm_NDIR.setDuty(30); // needs to be decided
+  pwm_heater.setDuty(30); // needs to be decided
 }
 
 void loop() {
-   ////////// Sensor reading logic + PWM
-   //
-   // The temperature sensors va will go on every 20s (not sure, could be changed), the gas sensors will go on immediately one after another
-   //
-   /////////
+  // The temperature sensors will go on every 20s (not sure, could be changed), the gas sensors will go on immediately one after another
 
-  // ADC logic - external ADC will convert the NDIR, sensor 2, temperature sensor 1, internal ADC will convert the last two temperature sensors
-  //if(NDIR & S2 & T1)
-    digital_value = ads1015.readADC_SingleEnded(0);
-  //else
-    float digital_value = readADC(adc_pin);
+  // Current Sensor Pump logic
+  float csp_voltage_raw = readADC(32);
+  csp_voltage = csp_voltage_raw * 0.1875e-3;
+  check_voltage_threshold(csp_voltage);
 
+  // NDIR gas sensor logic
+  float NDIR_raw_active_reading = ads1115.readADC_SingleEnded(0);
+  float NDIR_raw_ref_reading = ads1115.readADC_SingleEnded(1);
+  NDIR_active_voltage = NDIR_raw_active_reading * 0.1875e-3;
+  NDIR_ref_voltage = NDIR_raw_ref_reading * 0.1875e-3;
+  gas_concentration = NDIR_gas_reading(NDIR_active_voltage, NDIR_reference_voltage, cal_cons);
+
+  // NDIR temp sensor
+  float NDIR_temp_voltage = ads1115.readADC_SingleEnded(3);
+
+
+  // thermistors
+  int16_t voltage = readADC(34);
+  float resistance_ntc = calculate_resistance(voltage);
+  float temperature_th_heater = calculate_temperature(resistance_ntc);
+
+  voltage = readADC(35);
+  resistance_ntc = calculate_resistance(voltage);
+  float temperature_th_sensor = calculate_temperature(resistance_ntc);
   /// I2C Logic
   //
   // Digital values from the external ADC will go through the I2C for PLC and OLED implementation
@@ -42,8 +70,9 @@ void loop() {
   //
   // Input parameters: gas digital values, Output parameters: 10V signal to the PLC
   //
-    checkLimitForAlarm(digital_value);
-  
+  checkLimitForAlarm(gas_concentration); 
+  ///////
+
 
   ///// OLED logic
   //
